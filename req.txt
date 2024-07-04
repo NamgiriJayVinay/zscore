@@ -1,0 +1,14 @@
+[Vivekanandan S] 07-04-2024 12:51
+@Jaya Vinay Namgiri Please try comparing features : AccessTime vs CPuTIme vs BgTime vs Power Usage vs WifiDataUsage
+
+
+[Vivekanandan S] 07-04-2024 12:53
+We need to know the following statements:
+
+1. App A used a permission <X> times in background
+2. App A has used permissions <a,b,c,..> in background and caused battery increase by X% in background compared to foreground
+3. Permissions <A,B,C,..> were frequently used in background in last day
+4. App A has used permissions <A,B,C,..> in background causing increased CpuTime and Wifi Data usage
+
+[Vivekanandan S] 07-04-2024 12:56
+Basically, we need to know if an app has increased permission access along with increased cpu, power and wifi
