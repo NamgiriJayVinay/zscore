@@ -35,3 +35,48 @@ plt.title('Z-Scores of Features by Package Name (Threshold = 2)')
 plt.xticks(rotation=270)
 plt.legend(loc='upper right')
 plt.show()
+
+
+
+
+
+
+import pandas as pd
+import numpy as np
+import plotly.express as px
+from scipy.stats import zscore
+
+# Load the dataset
+file_path = 'data_zscore_1.csv'
+data = pd.read_csv(file_path)
+
+# Select relevant columns for analysis
+columns_to_analyze = ['Access Time', 'cpuTime', 'backgroundTime', 'powerUsage', 'wifiDataUsage']
+data_filtered = data[columns_to_analyze].copy()
+
+# Calculate z-scores for the selected features
+z_scores = data_filtered.apply(zscore)
+
+# Add the packageName to the z_scores dataframe for grouping in the plots
+z_scores['packageName'] = data['packageName']
+
+# Melt the dataframe for easier plotting with Plotly
+z_scores_melted = z_scores.melt(id_vars=['packageName'], var_name='Feature', value_name='Z-Score')
+
+# Create the plot
+fig = px.bar(z_scores_melted, x='packageName', y='Z-Score', color='Feature',
+             title='Z-Scores of Features by Package Name (Threshold = 2)',
+             labels={'Z-Score': 'Z-Score', 'packageName': 'Package Name'},
+             barmode='group')
+
+# Add horizontal lines for threshold
+fig.add_shape(type='line', x0=-0.5, x1=len(z_scores['packageName'])-0.5, y0=2, y1=2,
+              line=dict(color='Red', dash='dash'))
+fig.add_shape(type='line', x0=-0.5, x1=len(z_scores['packageName'])-0.5, y0=-2, y1=-2,
+              line=dict(color='Red', dash='dash'))
+
+# Update x-axis labels rotation
+fig.update_layout(xaxis={'categoryorder':'total descending'}, xaxis_tickangle=-45)
+
+# Show the plot
+fig.show()
