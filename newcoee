@@ -1,0 +1,226 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.stats import zscore
+from sklearn.ensemble import IsolationForest
+from sklearn.decomposition import PCA
+from sklearn.cluster import KMeans
+import seaborn as sns
+
+# Load the data
+file_path = 'path_to_your_file.csv'  # Replace with your file path
+data = pd.read_csv(file_path)
+
+# Convert timestamp columns to readable datetime format
+data['timeStamp'] = pd.to_datetime(data['timeStamp'], unit='ms')
+data['lastTimeUsed'] = pd.to_datetime(data['lastTimeUsed'], unit='ms', errors='coerce')
+data['installTime'] = pd.to_datetime(data['installTime'], unit='ms')
+data['lastUpdateTime'] = pd.to_datetime(data['lastUpdateTime'], unit='ms')
+
+# Display the DataFrame with readable timestamps
+print(data[['timeStamp', 'lastTimeUsed', 'installTime', 'lastUpdateTime']].head())
+
+# Analyze the dataset
+data_info = data.info()
+data_head = data.head()
+
+# Calculate z-scores for all numerical columns
+numerical_cols = data.select_dtypes(include=['int64', 'float64']).columns
+data_zscores = data[numerical_cols].apply(zscore)
+
+# Identify anomalies (z-score > 3 or < -3)
+anomalies = (data_zscores > 3) | (data_zscores < -3)
+anomaly_counts = anomalies.sum()
+
+# Extract rows with anomalies
+anomaly_rows = data[anomalies.any(axis=1)]
+
+# Display anomalies
+print("Anomalies Detected in Data")
+print(anomaly_rows.head())
+
+# Visualizations
+def plot_usage_patterns(data):
+    fig, ax = plt.subplots(3, 1, figsize=(12, 18))
+
+    # Hourly usage patterns
+    ax[0].plot(data['timeStamp'], data['foregroundTime'], label='Foreground Time')
+    ax[0].plot(data['timeStamp'], data['backgroundTime'], label='Background Time')
+    ax[0].set_title('Hourly Usage Patterns')
+    ax[0].set_xlabel('Timestamp')
+    ax[0].set_ylabel('Time (ms)')
+    ax[0].legend()
+
+    # Daily usage patterns
+    ax[1].plot(data['timeStamp'], data['foregroundTimeDaily'], label='Foreground Time Daily')
+    ax[1].plot(data['timeStamp'], data['backgroundTimeDaily'], label='Background Time Daily')
+    ax[1].set_title('Daily Usage Patterns')
+    ax[1].set_xlabel('Timestamp')
+    ax[1].set_ylabel('Time (ms)')
+    ax[1].legend()
+
+    # Weekly usage patterns
+    ax[2].plot(data['timeStamp'], data['foregroundTimeWeekly'], label='Foreground Time Weekly')
+    ax[2].plot(data['timeStamp'], data['backgroundTimeWeekly'], label='Background Time Weekly')
+    ax[2].set_title('Weekly Usage Patterns')
+    ax[2].set_xlabel('Timestamp')
+    ax[2].set_ylabel('Time (ms)')
+    ax[2].legend()
+
+    plt.tight_layout()
+    plt.show()
+
+def plot_permission_analysis(data):
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    # Permissions used
+    permission_counts = data['permissionUsed'].value_counts()
+    permission_counts.plot(kind='bar', ax=ax)
+    ax.set_title('Permissions Used')
+    ax.set_xlabel('Permissions')
+    ax.set_ylabel('Counts')
+
+    plt.tight_layout()
+    plt.show()
+
+def plot_power_consumption(data):
+    fig, ax = plt.subplots(3, 1, figsize=(12, 18))
+
+    # Hourly power usage
+    ax[0].plot(data['timeStamp'], data['powerUsage'], label='Power Usage')
+    ax[0].plot(data['timeStamp'], data['screenPowerUsage'], label='Screen Power Usage')
+    ax[0].set_title('Hourly Power Consumption')
+    ax[0].set_xlabel('Timestamp')
+    ax[0].set_ylabel('Power (mAh)')
+    ax[0].legend()
+
+    # Daily power usage
+    ax[1].plot(data['timeStamp'], data['powerUsageDaily'], label='Power Usage Daily')
+    ax[1].plot(data['timeStamp'], data['screenPowerUsageDaily'], label='Screen Power Usage Daily')
+    ax[1].set_title('Daily Power Consumption')
+    ax[1].set_xlabel('Timestamp')
+    ax[1].set_ylabel('Power (mAh)')
+    ax[1].legend()
+
+    # Weekly power usage
+    ax[2].plot(data['timeStamp'], data['powerUsageWeekly'], label='Power Usage Weekly')
+    ax[2].plot(data['timeStamp'], data['screenPowerUsageWeekly'], label='Screen Power Usage Weekly')
+    ax[2].set_title('Weekly Power Consumption')
+    ax[2].set_xlabel('Timestamp')
+    ax[2].set_ylabel('Power (mAh)')
+    ax[2].legend()
+
+    plt.tight_layout()
+    plt.show()
+
+def plot_data_transfer(data):
+    fig, ax = plt.subplots(3, 1, figsize=(12, 18))
+
+    # Hourly data transfer
+    ax[0].plot(data['timeStamp'], data['rxBytesWifiHourly'], label='RX Bytes WiFi Hourly')
+    ax[0].plot(data['timeStamp'], data['txBytesWifiHourly'], label='TX Bytes WiFi Hourly')
+    ax[0].plot(data['timeStamp'], data['rxBytesMobileHourly'], label='RX Bytes Mobile Hourly')
+    ax[0].plot(data['timeStamp'], data['txBytesMobileHourly'], label='TX Bytes Mobile Hourly')
+    ax[0].set_title('Hourly Data Transfer')
+    ax[0].set_xlabel('Timestamp')
+    ax[0].set_ylabel('Bytes')
+    ax[0].legend()
+
+    # Daily data transfer
+    ax[1].plot(data['timeStamp'], data['rxBytesWifiDaily'], label='RX Bytes WiFi Daily')
+    ax[1].plot(data['timeStamp'], data['txBytesWifiDaily'], label='TX Bytes WiFi Daily')
+    ax[1].plot(data['timeStamp'], data['rxBytesMobileDaily'], label='RX Bytes Mobile Daily')
+    ax[1].plot(data['timeStamp'], data['txBytesMobileDaily'], label='TX Bytes Mobile Daily')
+    ax[1].set_title('Daily Data Transfer')
+    ax[1].set_xlabel('Timestamp')
+    ax[1].set_ylabel('Bytes')
+    ax[1].legend()
+
+    # Weekly data transfer
+    ax[2].plot(data['timeStamp'], data['rxBytesWifiWeekly'], label='RX Bytes WiFi Weekly')
+    ax[2].plot(data['timeStamp'], data['txBytesWifiWeekly'], label='TX Bytes WiFi Weekly')
+    ax[2].plot(data['timeStamp'], data['rxBytesMobileWeekly'], label='RX Bytes Mobile Weekly')
+    ax[2].plot(data['timeStamp'], data['txBytesMobileWeekly'], label='TX Bytes Mobile Weekly')
+    ax[2].set_title('Weekly Data Transfer')
+    ax[2].set_xlabel('Timestamp')
+    ax[2].set_ylabel('Bytes')
+    ax[2].legend()
+
+    plt.tight_layout()
+    plt.show()
+
+# Generate the visualizations
+plot_usage_patterns(data)
+plot_permission_analysis(data)
+plot_power_consumption(data)
+plot_data_transfer(data)
+
+# Isolation Forest for anomaly detection
+data_for_iforest = data[numerical_cols].fillna(0)  # Fill NaNs with 0 for the model
+iso_forest = IsolationForest(contamination=0.05, random_state=42)
+data['anomaly'] = iso_forest.fit_predict(data_for_iforest)
+
+# Separate anomalies and normal data
+iso_anomalies = data[data['anomaly'] == -1]
+normal_data = data[data['anomaly'] == 1]
+
+# Display Isolation Forest anomalies
+print("Isolation Forest Anomalies")
+print(iso_anomalies.head())
+
+# Visualization for Isolation Forest anomalies
+def plot_iso_anomalies_permissions(iso_anomalies):
+    fig, ax = plt.subplots(3, 1, figsize=(12, 18))
+
+    # Anomalies per permission type
+    permission_anomalies = iso_anomalies['permissionUsed'].value_counts()
+    permission_anomalies.plot(kind='bar', ax=ax[0])
+    ax[0].set_title('Isolation Forest Anomalies by Permission Used')
+    ax[0].set_xlabel('Permission')
+    ax[0].set_ylabel('Count of Anomalies')
+
+    # Background vs Foreground Usage in anomalies
+    bg_fg_anomalies = iso_anomalies['background_or_foreground_usage'].value_counts()
+    bg_fg_anomalies.plot(kind='bar', ax=ax[1])
+    ax[1].set_title('Background vs Foreground Usage in Isolation Forest Anomalies')
+    ax[1].set_xlabel('Usage Type')
+    ax[1].set_ylabel('Count of Anomalies')
+    ax[1].set_xticklabels(['Foreground', 'Background'], rotation=0)
+
+    # Permissions count in anomalies
+    permission_count_anomalies = iso_anomalies['grantedPermission'].apply(lambda x: str(x).count('1'))
+    permission_count_anomalies.plot(kind='hist', bins=20, ax=ax[2])
+    ax[2].set_title('Distribution of Permissions Count in Isolation Forest Anomalies')
+    ax[2].set_xlabel('Number of Permissions Granted')
+    ax[2].set_ylabel('Count of Anomalies
+
+
+
+
+plt.tight_layout()
+    plt.show()
+
+# Generate the visualizations for isolation forest anomalies
+plot_iso_anomalies_permissions(iso_anomalies)
+
+# Clustering to identify anomalies visually
+# Perform PCA to reduce dimensions to 2 for visualization
+pca = PCA(n_components=2)
+data_pca = pca.fit_transform(data_for_iforest)
+
+# Fit KMeans clustering
+kmeans = KMeans(n_clusters=3, random_state=42)
+clusters = kmeans.fit_predict(data_pca)
+
+# Create a DataFrame for plotting
+plot_data = pd.DataFrame(data_pca, columns=['PCA1', 'PCA2'])
+plot_data['cluster'] = clusters
+plot_data['anomaly'] = data['anomaly']
+
+# Plot the clustering results
+plt.figure(figsize=(12, 8))
+sns.scatterplot(data=plot_data, x='PCA1', y='PCA2', hue='cluster', palette='viridis', style='anomaly', markers={1: 'o', -1: 'X'}, s=100)
+plt.title('Clustering of Data with Anomalies Highlighted')
+plt.xlabel('Principal Component 1')
+plt.ylabel('Principal Component 2')
+plt.legend(title='Cluster')
+plt.show()
