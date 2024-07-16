@@ -80,3 +80,14 @@ fig.update_layout(xaxis={'categoryorder':'total descending'}, xaxis_tickangle=-4
 
 # Show the plot
 fig.show()
+
+
+
+
+## new 
+
+weekly_cols=data[['uid', 'appCategory', 'appTrustLevel','lastTimeUsed','installTime','lastUpdateTime', 'permissionUsed'
+ ,'grantedPermission', 'accessHours','accessDate', 'rxBytesWifiWeekly',  'rxBytesMobileWeekly',
+ 'txBytesWifiWeekly',  'txBytesMobileWeekly','cpuTimeWeekly',  'backgroundTimeWeekly','foregroundTimeWeekly', 'powerUsageWeekly', 'screenPowerUsageWeekly' , 'totalUsageWeekly']]
+
+columns_to_analyze = ['accessHours','txBytesWifiWeekly','cpuTimeWeekly','backgroundTimeWeekly', 'foregroundTimeWeekly', 'powerUsageWeekly', 'screenPowerUsageWeekly', 'totalUsageWeekly']
