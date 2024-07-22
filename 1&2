@@ -1,0 +1,69 @@
+#------------------------ This is plot 1 --------------------------------------------------------
+
+# adding recently used column 
+data['recentlyUsedTime']=data['timeStamp']-data['lastTimeUsed']
+data['recentlyUsedTime']
+
+
+columns_to_analyze = ['recentlyUsedTime']
+data_filtered = data[columns_to_analyze].copy()
+
+# Calculate z-scores for the selected features
+z_scores = data_filtered.apply(zscore)
+
+# print(z_scores)
+
+# Add the packageName to the z_scores dataframe for grouping in the plots
+z_scores['uid'] = data['uid']
+
+# print(z_scores)
+
+# Melt the dataframe for easier plotting with seaborn
+z_scores_melted = z_scores.melt(id_vars=['uid'], var_name='Feature', value_name='Z-Score')
+
+# print(z_scores_melted)
+# Bar plot of z-scores with respect to each packageName
+plt.figure(figsize=(14, 8))
+sns.barplot(x='uid', y='Z-Score', hue='Feature', data=z_scores_melted, errorbar=None)
+plt.axhline(y=2, color='r', linestyle='--', label='Threshold')
+plt.axhline(y=-2, color='r', linestyle='--')
+plt.title('Z-Scores of Recently used time by Package Name (Threshold = 2)')
+plt.xticks(rotation=270)
+plt.legend(loc='upper right')
+plt.show()
+
+
+#------------------------ This is plot 2--------------------------------------------------------
+
+# Z-scores for sensor count data
+# Select relevant columns for analysis
+
+columns_to_analyze = ['totalUsage', 'totalUsageDaily', 'totalUsageDaily']
+data_filtered = data[columns_to_analyze].copy()
+
+# Calculate z-scores for the selected features
+z_scores = data_filtered.apply(zscore)
+
+# print(z_scores)
+
+# Add the packageName to the z_scores dataframe for grouping in the plots
+z_scores['uid'] = data['uid']
+
+# print(z_scores)
+
+# Melt the dataframe for easier plotting with seaborn
+z_scores_melted = z_scores.melt(id_vars=['uid'], var_name='Feature', value_name='Z-Score')
+
+# print(z_scores_melted)
+# Bar plot of z-scores with respect to each packageName
+plt.figure(figsize=(14, 8))
+sns.barplot(x='uid', y='Z-Score', hue='Feature', data=z_scores_melted, errorbar=None)
+plt.axhline(y=2, color='r', linestyle='--', label='Threshold')
+plt.axhline(y=-2, color='r', linestyle='--')
+plt.title('Z-Scores of Usage Count by Package Name (Threshold = 2)')
+plt.xticks(rotation=270)
+plt.legend(loc='upper right')
+plt.show()
+
+
+as you see both plots are having same x axis and y axis , now i want to get the plot such that plot 1 vs plot 2 
