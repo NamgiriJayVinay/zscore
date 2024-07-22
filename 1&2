@@ -70,3 +70,51 @@ as you see both plots are having same x axis and y axis , now i want to get the 
 
 
 ans :
+
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import zscore
+
+# Load the data
+file_path = 'path_to_your_file.csv'
+data = pd.read_csv(file_path)
+
+# Adding recently used column
+data['recentlyUsedTime'] = data['timeStamp'] - data['lastTimeUsed']
+columns_to_analyze = ['recentlyUsedTime']
+data_filtered = data[columns_to_analyze].copy()
+
+# Calculate z-scores for the selected features
+z_scores = data_filtered.apply(zscore)
+
+# Add the uid to the z_scores dataframe for grouping in the plots
+z_scores['uid'] = data['uid']
+
+# Melt the dataframe for easier plotting with seaborn
+z_scores_melted = z_scores.melt(id_vars=['uid'], var_name='Feature', value_name='Z-Score')
+
+# First combined plot data
+data_combined_1 = z_scores_melted.copy()
+data_combined_1['Plot'] = 'Recently Used Time'
+
+# Recalculate the second set of z-scores and melt them
+columns_to_analyze_2 = ['totalUsage', 'totalUsageDaily', 'totalUsageWeekly', 'accessHours']
+data_filtered_2 = data[columns_to_analyze_2].copy()
+z_scores_2 = data_filtered_2.apply(zscore)
+z_scores_2['uid'] = data['uid']
+z_scores_melted_2 = z_scores_2.melt(id_vars=['uid'], var_name='Feature', value_name='Z-Score')
+z_scores_melted_2['Plot'] = 'Usage Count'
+
+# Combine both melted dataframes
+data_combined = pd.concat([data_combined_1, z_scores_melted_2])
+
+# Combined plot without black lines on bars
+plt.figure(figsize=(14, 8))
+sns.barplot(x='uid', y='Z-Score', hue='Feature', data=data_combined, edgecolor=None)
+plt.axhline(y=2, color='r', linestyle='--', label='Threshold')
+plt.axhline(y=-2, color='r', linestyle='--')
+plt.title('Combined Z-Scores by UID (Threshold = 2)')
+plt.xticks(rotation=270)
+plt.legend(loc='upper right')
+plt.show()
