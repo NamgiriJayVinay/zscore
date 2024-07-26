@@ -1,0 +1,54 @@
+# Select relevant columns for multivariate analysis
+selected_columns = ['backgroundTimeWeekly', 'foregroundTimeWeekly', 'powerUsageWeekly', 'screenPowerUsageWeekly']
+
+# Step 1: Standardize the Data (Z-scores)
+standardized_data = (data[selected_columns] - data[selected_columns].mean()) / data[selected_columns].std()
+
+# Step 2: Calculate the Covariance Matrix
+cov_matrix = np.cov(standardized_data, rowvar=False)
+
+# Step 3: Compute the Inverse of the Covariance Matrix
+inv_cov_matrix = np.linalg.inv(cov_matrix)
+
+# Step 4: Calculate the Mahalanobis Distance for each data point
+mean_distr = standardized_data.mean(axis=0).values
+mahalanobis_distances = standardized_data.apply(
+    lambda row: mahalanobis(row.values, mean_distr, inv_cov_matrix), axis=1)
+
+# Adding Mahalanobis distances to the dataframe
+data['Mahalanobis_Distance'] = mahalanobis_distances
+
+# Display results
+import ace_tools as tools
+tools.display_dataframe_to_user(name="Multivariate Anomaly Scores", dataframe=data)
+
+
+
+
+
+import matplotlib.pyplot as plt
+
+# Histogram of Mahalanobis Distances
+plt.figure(figsize=(10, 6))
+plt.hist(data['Mahalanobis_Distance'], bins=30, edgecolor='k', alpha=0.7)
+plt.title('Histogram of Mahalanobis Distances')
+plt.xlabel('Mahalanobis Distance')
+plt.ylabel('Frequency')
+plt.show()
+
+# Box Plot of Mahalanobis Distances
+plt.figure(figsize=(10, 6))
+plt.boxplot(data['Mahalanobis_Distance'], vert=False)
+plt.title('Box Plot of Mahalanobis Distances')
+plt.xlabel('Mahalanobis Distance')
+plt.show()
+
+# Scatter Plot of Two Selected Features with Anomalies Highlighted
+plt.figure(figsize=(10, 6))
+plt.scatter(data['backgroundTimeWeekly'], data['foregroundTimeWeekly'], 
+            c=data['Mahalanobis_Distance'], cmap='viridis', edgecolor='k')
+plt.colorbar(label='Mahalanobis Distance')
+plt.title('Scatter Plot of Background Time Weekly vs Foreground Time Weekly')
+plt.xlabel('Background Time Weekly')
+plt.ylabel('Foreground Time Weekly')
+plt.show()
