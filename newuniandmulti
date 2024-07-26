@@ -1,3 +1,7 @@
+C:\Users\jaya.namgiri\AppData\Local\Programs\Python\Python311\Lib\site-packages\numpy\core\fromnumeric.py:3430: FutureWarning: In a future version, DataFrame.mean(axis=None) will return a scalar mean over the entire DataFrame. To retain the old behavior, use 'frame.mean(axis=0)' or just 'frame.mean()'
+  return mean(axis=axis, dtype=dtype, out=out, **kwargs)
+
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
