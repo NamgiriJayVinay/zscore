@@ -1,3 +1,33 @@
+# univariant 
+
+# Weekly*******************************************************
+columns_to_analyze_2 = ['totalUsageWeekly', 'backgroundTimeWeekly', 'rxBytesWifiWeekly','txBytesWifiWeekly','powerUsageWeekly']
+data_filtered_2 = data[columns_to_analyze_2].copy()
+z_scores_2 = data_filtered_2.apply(zscore)
+z_scores_2['uid'] = data['uid']
+z_scores_melted_2 = z_scores_2.melt(id_vars=['uid'], var_name='Feature', value_name='Z-Score')
+z_scores_melted_2['Plot'] = 'Usage Count'
+
+# Combine both melted dataframes
+data_combined = pd.concat([ z_scores_melted_2])
+
+# Combined plot without black lines on bars
+plt.figure(figsize=(14, 8))
+sns.barplot(x='uid', y='Z-Score', hue='Feature', data=data_combined)
+plt.axhline(y=2, color='r', linestyle='--', label='Threshold')
+plt.axhline(y=-2, color='r', linestyle='--')
+plt.title('Combined Z-Scores by UID Weekly (Threshold = 2)')
+plt.xticks(rotation=270)
+plt.legend(loc='upper right')
+plt.show()
+
+
+
+
+
+
+
+
 # Select relevant columns for multivariate analysis
 selected_columns = ['backgroundTimeWeekly', 'foregroundTimeWeekly', 'powerUsageWeekly', 'screenPowerUsageWeekly']
 
