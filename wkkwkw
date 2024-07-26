@@ -1,0 +1,129 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import zscore
+from scipy.spatial.distance import mahalanobis
+from scipy.stats import chi2
+import numpy as np
+
+# Load the CSV file
+file_path = '/mnt/data/sampled_vaedb_Data.csv'
+data = pd.read_csv(file_path)
+
+# Columns of interest
+columns_of_interest = [
+    'totalUsageWeekly', 
+    'backgroundTimeWeekly', 
+    'rxBytesWifiWeekly', 
+    'txBytesWifiWeekly', 
+    'powerUsageWeekly'
+]
+
+# Extracting relevant columns
+data_of_interest = data[columns_of_interest + ['uid']]
+
+# Calculating z-scores only for columns of interest
+zscores = data_of_interest[columns_of_interest].apply(zscore)
+
+# Finding outliers using IQR
+def find_outliers_iqr(data, column):
+    Q1 = data[column].quantile(0.25)
+    Q3 = data[column].quantile(0.75)
+    IQR = Q3 - Q1
+    lower_bound = Q1 - 1.5 * IQR
+    upper_bound = Q3 + 1.5 * IQR
+    return data[(data[column] < lower_bound) | (data[column] > upper_bound)]
+
+# Finding outliers using IQR for each column of interest
+iqr_outliers = pd.concat([find_outliers_iqr(data, column) for column in columns_of_interest])
+
+# Getting unique uids for IQR outliers
+iqr_outlier_uids = iqr_outliers['uid'].unique()
+
+# Finding outliers with z-score threshold of 2
+zscore_outliers = zscores[(zscores > 2) | (zscores < -2)]
+
+# Getting unique uids for Z-score outliers
+zscore_outlier_uids = data_of_interest['uid'][zscore_outliers.any(axis=1)].unique()
+
+# Melting the data for box plots
+melted_data = data.melt(id_vars=['uid'], value_vars=columns_of_interest, var_name='Metric', value_name='Value')
+
+# Box plot
+plt.figure(figsize=(10, 6))
+sns.boxplot(x='Metric', y='Value', data=melted_data)
+plt.title('Box Plots of Selected Columns')
+plt.xlabel('Metrics')
+plt.ylabel('Values')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# Melting the z-score data for bar plots with UID on x-axis
+melted_zscores_uid = pd.concat([data_of_interest[['uid']], zscores], axis=1).melt(id_vars=['uid'], value_vars=columns_of_interest, var_name='Metric', value_name='Z-Score')
+
+# Bar plot of z-scores with UID on x-axis
+plt.figure(figsize=(18, 6))
+sns.barplot(x='uid', y='Z-Score', hue='Metric', data=melted_zscores_uid)
+plt.axhline(y=2, color='r', linestyle='--', label='Threshold = 2')
+plt.axhline(y=-2, color='r', linestyle='--')
+plt.title('Z-Score Bar Plots of Selected Columns by UID')
+plt.xlabel('UID')
+plt.ylabel('Z-Score')
+plt.legend(title='Metric')
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# Display IQR outliers UIDs
+print("IQR Outlier UIDs:", iqr_outlier_uids)
+
+# Display Z-score outliers UIDs
+print("Z-score Outlier UIDs:", zscore_outlier_uids)
+
+import ace_tools as tools; tools.display_dataframe_to_user(name="IQR Outlier UIDs", dataframe=pd.DataFrame(iqr_outlier_uids, columns=["UID"]))
+tools.display_dataframe_to_user(name="Z-Score Outlier UIDs", dataframe=pd.DataFrame(zscore_outlier_uids, columns=["UID"]))
+
+# Multivariate Outlier Detection using Mahalanobis Distance
+# Function to calculate Mahalanobis distance
+def mahalanobis_distance(x=None, data=None, cov=None):
+    x_mu = x - np.mean(data, axis=0)
+    inv_covmat = np.linalg.inv(cov)
+    left_term = np.dot(x_mu, inv_covmat)
+    mahal = np.dot(left_term, x_mu.T)
+    return mahal.diagonal()
+
+# Data for Mahalanobis distance calculation
+data_for_mahal = data_of_interest[columns_of_interest].dropna()
+
+# Calculate covariance matrix
+cov_matrix = np.cov(data_for_mahal, rowvar=False)
+
+# Calculate Mahalanobis distance for each observation
+data_for_mahal['Mahalanobis_Dist'] = mahalanobis_distance(x=data_for_mahal, data=data_for_mahal, cov=cov_matrix)
+
+# Calculate threshold for identifying outliers (using chi-square distribution, p-value = 0.01)
+threshold = np.sqrt(chi2.ppf((1-0.01), df=len(columns_of_interest)))
+
+# Identify outliers
+mahalanobis_outliers = data_for_mahal[data_for_mahal['Mahalanobis_Dist'] > threshold]
+
+# Get unique UIDs of outliers
+mahalanobis_outlier_uids = data_of_interest.loc[mahalanobis_outliers.index, 'uid'].unique()
+
+# Plotting Mahalanobis distances for each UID with UID on x-axis
+plt.figure(figsize=(12, 6))
+plt.bar(data_of_interest['uid'], data_for_mahal['Mahalanobis_Dist'])
+plt.axhline(y=threshold, color='r', linestyle='--', label='Outlier Threshold')
+plt.title('Mahalanobis Distances by UID')
+plt.xlabel('UID')
+plt.ylabel('Mahalanobis Distance')
+plt.legend()
+plt.xticks(rotation=90)
+plt.tight_layout()
+plt.show()
+
+# Display outlier UIDs for Mahalanobis Distance
+print("Mahalanobis Outlier UIDs:", mahalanobis_outlier_uids)
+
+tools.display_dataframe_to_user(name="Mahalanobis Outlier UIDs", dataframe=pd.DataFrame(mahalanobis_outlier_uids, columns=["UID"]))
