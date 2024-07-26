@@ -1,4 +1,4 @@
-# univariant 
+mo# univariant 
 
 # Weekly*******************************************************
 columns_to_analyze_2 = ['totalUsageWeekly', 'backgroundTimeWeekly', 'rxBytesWifiWeekly','txBytesWifiWeekly','powerUsageWeekly']
@@ -126,4 +126,95 @@ plt.colorbar(label='Mahalanobis Distance')
 plt.title('Scatter Plot of Background Time Weekly vs Foreground Time Weekly')
 plt.xlabel('Background Time Weekly')
 plt.ylabel('Foreground Time Weekly')
+plt.show
+
+
+
+all jay 
+
+import numpy as np
+import pandas as pd
+from scipy.stats import zscore
+from scipy.spatial.distance import mahalanobis
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Load the dataset
+file_path = '/mnt/data/normalised_final (2).csv'
+data = pd.read_csv(file_path)
+
+# Calculate Z-scores for weekly metrics
+columns_to_analyze_2 = ['totalUsageWeekly', 'backgroundTimeWeekly', 'rxBytesWifiWeekly', 'txBytesWifiWeekly', 'powerUsageWeekly']
+data_filtered_2 = data[columns_to_analyze_2].copy()
+z_scores_2 = data_filtered_2.apply(zscore)
+z_scores_2['uid'] = data['uid']
+
+# Melt the Z-scores dataframe for visualization
+z_scores_melted_2 = z_scores_2.melt(id_vars=['uid'], var_name='Feature', value_name='Z-Score')
+z_scores_melted_2['Plot'] = 'Usage Count'
+
+# Calculate Mahalanobis Distance for multivariate analysis
+# Standardize the data (Z-scores)
+standardized_data = (data_filtered_2 - data_filtered_2.mean()) / data_filtered_2.std()
+
+# Calculate the covariance matrix
+cov_matrix = np.cov(standardized_data, rowvar=False)
+
+# Compute the inverse of the covariance matrix
+inv_cov_matrix = np.linalg.inv(cov_matrix)
+
+# Calculate Mahalanobis Distance for each data point
+mean_distr = standardized_data.mean(axis=0).values
+mahalanobis_distances = standardized_data.apply(
+    lambda row: mahalanobis(row.values, mean_distr, inv_cov_matrix), axis=1)
+
+# Adding Mahalanobis distances to the dataframe
+data['Mahalanobis_Distance'] = mahalanobis_distances
+
+# Identify anomalies based on Z-score threshold
+anomaly_z_score_uids = z_scores_2[(z_scores_2['totalUsageWeekly'].abs() > 2) |
+                                  (z_scores_2['backgroundTimeWeekly'].abs() > 2) |
+                                  (z_scores_2['rxBytesWifiWeekly'].abs() > 2) |
+                                  (z_scores_2['txBytesWifiWeekly'].abs() > 2) |
+                                  (z_scores_2['powerUsageWeekly'].abs() > 2)]['uid'].unique()
+
+# Identify anomalies based on Mahalanobis Distance threshold
+anomaly_mahalanobis_uids = data[data['Mahalanobis_Distance'] > 2]['uid'].unique()
+
+# Combine both sets of anomalies
+combined_anomaly_uids = np.intersect1d(anomaly_z_score_uids, anomaly_mahalanobis_uids)
+
+# Visualization
+# Histogram of Mahalanobis Distances
+plt.figure(figsize=(10, 6))
+plt.hist(data['Mahalanobis_Distance'], bins=30, edgecolor='k', alpha=0.7)
+plt.title('Histogram of Mahalanobis Distances')
+plt.xlabel('Mahalanobis Distance')
+plt.ylabel('Frequency')
 plt.show()
+
+# Box Plot of Mahalanobis Distances
+plt.figure(figsize=(10, 6))
+plt.boxplot(data['Mahalanobis_Distance'], vert=False)
+plt.title('Box Plot of Mahalanobis Distances')
+plt.xlabel('Mahalanobis Distance')
+plt.show()
+
+# Scatter Plot of Two Selected Features with Anomalies Highlighted
+plt.figure(figsize=(10, 6))
+plt.scatter(data['backgroundTimeWeekly'], data['foregroundTimeWeekly'], 
+            c=data['Mahalanobis_Distance'], cmap='viridis', edgecolor='k')
+plt.colorbar(label='Mahalanobis Distance')
+plt.title('Scatter Plot of Background Time Weekly vs Foreground Time Weekly')
+plt.xlabel('Background Time Weekly')
+plt.ylabel('Foreground Time Weekly')
+plt.show()
+
+# Display the dataframe with anomalies and Mahalanobis distances
+import ace_tools as tools
+tools.display_dataframe_to_user(name="Anomalies and Mahalanobis Distances", dataframe=data)
+
+# Print the results
+print("Anomalies based on Z-Scores:", anomaly_z_score_uids)
+print("Anomalies based on Mahalanobis Distance:", anomaly_mahalanobis_uids)
+print("Combined Anomalies (Both Z-Scores and Mahalanobis Distance):", combined_anomaly_uids.tolist())
