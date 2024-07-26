@@ -22,6 +22,51 @@ plt.legend(loc='upper right')
 plt.show()
 
 
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from scipy.spatial.distance import mahalanobis
+
+# Weekly metrics to analyze
+columns_to_analyze_2 = ['totalUsageWeekly', 'backgroundTimeWeekly', 'rxBytesWifiWeekly', 'txBytesWifiWeekly', 'powerUsageWeekly']
+data_filtered_2 = data[columns_to_analyze_2].copy()
+
+# Standardize the data (Z-scores)
+standardized_data = (data_filtered_2 - data_filtered_2.mean()) / data_filtered_2.std()
+
+# Calculate the covariance matrix
+cov_matrix = np.cov(standardized_data, rowvar=False)
+
+# Compute the inverse of the covariance matrix
+inv_cov_matrix = np.linalg.inv(cov_matrix)
+
+# Calculate Mahalanobis Distance for each data point
+mean_distr = standardized_data.mean(axis=0).values
+mahalanobis_distances = standardized_data.apply(
+    lambda row: mahalanobis(row.values, mean_distr, inv_cov_matrix), axis=1)
+
+# Adding Mahalanobis distances to the dataframe
+data['Mahalanobis_Distance'] = mahalanobis_distances
+
+# Visualization
+plt.figure(figsize=(14, 8))
+sns.barplot(x=data['uid'], y=data['Mahalanobis_Distance'])
+plt.axhline(y=2, color='r', linestyle='--', label='Threshold')
+plt.axhline(y=-2, color='r', linestyle='--')
+plt.title('Mahalanobis Distances by UID Weekly (Threshold = 2)')
+plt.xticks(rotation=270)
+plt.ylabel('Mahalanobis Distance')
+plt.legend(loc='upper right')
+plt.show()
+
+
+
+
+
+
+
+
 
 
 
