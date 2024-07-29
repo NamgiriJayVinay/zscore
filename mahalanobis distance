@@ -218,3 +218,92 @@ tools.display_dataframe_to_user(name="Anomalies and Mahalanobis Distances", data
 print("Anomalies based on Z-Scores:", anomaly_z_score_uids)
 print("Anomalies based on Mahalanobis Distance:", anomaly_mahalanobis_uids)
 print("Combined Anomalies (Both Z-Scores and Mahalanobis Distance):", combined_anomaly_uids.tolist())
+
+
+
+7777
+import numpy as np
+import pandas as pd
+from scipy.stats import zscore, chi2
+from scipy.spatial.distance import mahalanobis
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Load the dataset
+# Assuming your data is already loaded into a DataFrame called `data`
+
+# Columns to analyze
+columns_to_analyze_2 = ['totalUsage', 'totalUsageDaily', 'totalUsageWeekly', 'recentlyUsedTime']
+data_filtered_2 = data[columns_to_analyze_2].copy()
+
+# Calculate Z-scores for weekly metrics
+z_scores_2 = data_filtered_2.apply(zscore)
+z_scores_2['uid'] = data['uid']
+
+# Melt the Z-scores dataframe for visualization
+z_scores_melted_2 = z_scores_2.melt(id_vars=['uid'], var_name='Feature', value_name='Z-Score')
+z_scores_melted_2['Plot'] = 'Usage Count'
+
+# Calculate Mahalanobis Distance for multivariate analysis
+# Standardize the data (Z-scores)
+standardized_data = (data_filtered_2 - data_filtered_2.mean()) / data_filtered_2.std()
+
+# Calculate the covariance matrix
+cov_matrix = np.cov(standardized_data, rowvar=False)
+
+# Compute the inverse of the covariance matrix
+inv_cov_matrix = np.linalg.inv(cov_matrix)
+
+# Calculate Mahalanobis Distance for each data point
+mean_distr = standardized_data.mean(axis=0).values
+mahalanobis_distances = standardized_data.apply(
+    lambda row: mahalanobis(row.values, mean_distr, inv_cov_matrix), axis=1)
+
+# Adding Mahalanobis distances to the dataframe
+data['Mahalanobis_Distance'] = mahalanobis_distances
+
+# Determine the threshold using chi-squared distribution
+degrees_of_freedom = data_filtered_2.shape[1]
+threshold = np.sqrt(chi2.ppf(0.95, degrees_of_freedom))
+
+# Identify anomalies based on Z-score threshold
+anomaly_z_score_uids = z_scores_2[
+    (z_scores_2['totalUsage'].abs() > 2) |
+    (z_scores_2['totalUsageDaily'].abs() > 2) |
+    (z_scores_2['totalUsageWeekly'].abs() > 2) |
+    (z_scores_2['recentlyUsedTime'].abs() > 2)]['uid'].unique()
+
+# Identify anomalies based on Mahalanobis Distance threshold
+anomaly_mahalanobis_uids = data[data['Mahalanobis_Distance'] > threshold]['uid'].unique()
+
+# Combine both sets of anomalies
+combined_anomaly_uids = np.intersect1d(anomaly_z_score_uids, anomaly_mahalanobis_uids)
+
+# Display the dataframe with anomalies and Mahalanobis distances
+# import ace_tools as tools
+# tools.display_dataframe_to_user(name="Anomalies and Mahalanobis Distances", dataframe=data)
+
+# Print the results
+print("Anomalies based on Z-Scores:", anomaly_z_score_uids)
+print("Anomalies based on Mahalanobis Distance:", anomaly_mahalanobis_uids)
+print("Combined Anomalies (Both Z-Scores and Mahalanobis Distance):", combined_anomaly_uids.tolist())
+
+# Plot Z-scores
+plt.figure(figsize=(14, 8))
+sns.barplot(x='uid', y='Z-Score', hue='Feature', data=z_scores_melted_2)
+plt.axhline(y=2, color='r', linestyle='--', label='Threshold')
+plt.axhline(y=-2, color='r', linestyle='--')
+plt.title('Combined Z-Scores by UID Weekly (Threshold = 2)')
+plt.xticks(rotation=270)
+plt.legend(loc='upper right')
+plt.show()
+
+# Plot Mahalanobis Distances with threshold
+plt.figure(figsize=(14, 8))
+sns.barplot(x=data['uid'], y=data['Mahalanobis_Distance'])
+plt.axhline(y=threshold, color='r', linestyle='--', label=f'Threshold = {threshold:.2f}')
+plt.title('Mahalanobis Distances by UID Weekly (Chi-squared Threshold)')
+plt.xticks(rotation=270)
+plt.ylabel('Mahalanobis Distance')
+plt.legend(loc='upper right')
+plt.show()
