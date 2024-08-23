@@ -48,3 +48,78 @@ This is my dropdown in main ctivity .xml <com.google.android.material.textfield.
 
 
 
+
+
+
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.os.Bundle;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.util.Log;
+import androidx.appcompat.app.AppCompatActivity;
+import com.google.android.material.textfield.TextInputLayout;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity {
+
+    private String pkg;
+    private AutoCompleteTextView autoCompleteTextView;
+    private TextInputLayout dropDown;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        dropDown = findViewById(R.id.dropDown);
+        autoCompleteTextView = findViewById(R.id.autoCompleteTextView);
+
+        // Get all installed packages
+        List<String> sensorApps = getInstalledSensorApps();
+
+        // Populate dropdown with the package names
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, sensorApps);
+        autoCompleteTextView.setAdapter(adapter);
+
+        // Set the selected package to `pkg`
+        autoCompleteTextView.setOnItemClickListener((parent, view, position, id) -> {
+            pkg = adapter.getItem(position);
+            Log.d("SELECTED_PACKAGE", "Selected package: " + pkg);
+        });
+    }
+
+    private List<String> getInstalledSensorApps() {
+        List<String> sensorApps = new ArrayList<>();
+        PackageManager pm = getPackageManager();
+        List<PackageInfo> packages = pm.getInstalledPackages(0);
+
+        // Filter the packages starting with com.example.sensors_app-
+        for (PackageInfo packageInfo : packages) {
+            if (packageInfo.packageName.startsWith("com.example.sensors_app-")) {
+                sensorApps.add(packageInfo.packageName);
+            }
+        }
+        return sensorApps;
+    }
+
+    private void startSensor(String sensorType, int duration, boolean isBackground) {
+        // Ensure that a package is selected
+        if (pkg == null || pkg.isEmpty()) {
+            Log.e("ERROR", "No package selected");
+            return;
+        }
+
+        Intent intent = new Intent();
+        intent.setAction(pkg + ".START_" + sensorType);
+        intent.setPackage(pkg);
+        intent.putExtra("DURATION", duration);
+        intent.putExtra("isBackground", isBackground);
+        sendBroadcast(intent);
+
+        Log.d("SENT", "Broadcast sent with " + sensorType);
+        Log.d("SENT", "Intent sent with " + intent);
+    }
+}
