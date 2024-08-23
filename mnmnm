@@ -263,4 +263,112 @@ public class MainActivity extends AppCompatActivity {
 }
 
 
+787889
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.AutoCompleteTextView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import android.widget.ImageView;
+import android.widget.Toast;
 
+import androidx.appcompat.app.AppCompatActivity;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity {
+
+    private AutoCompleteTextView autoCompleteTextView;
+    private AppDropdownAdapter appDropdownAdapter;
+    private PackageManager packageManager;
+    private LinearLayout selectedAppLayout;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        autoCompleteTextView = findViewById(R.id.autoCompleteTextView);
+        selectedAppLayout = findViewById(R.id.selectedAppLayout); // Add a container for selected app view
+        packageManager = getPackageManager();
+
+        // Retrieve installed apps with package names starting with "com.example.sensors_app-"
+        List<ApplicationInfo> sensorApps = getInstalledSensorApps();
+
+        // Create the custom adapter
+        appDropdownAdapter = new AppDropdownAdapter(this, sensorApps);
+
+        // Set the adapter to the AutoCompleteTextView
+        autoCompleteTextView.setAdapter(appDropdownAdapter);
+
+        // Set the OnItemClickListener to handle the selection
+        autoCompleteTextView.setOnItemClickListener((parent, view, position, id) -> {
+            // Get the selected ApplicationInfo
+            ApplicationInfo selectedApp = appDropdownAdapter.getItem(position);
+
+            // Get the app label (human-readable name) and app icon
+            if (selectedApp != null) {
+                String appLabel = packageManager.getApplicationLabel(selectedApp).toString();
+                Drawable appIcon = packageManager.getApplicationIcon(selectedApp);
+
+                // Inflate the custom view and set app name and icon
+                LayoutInflater inflater = LayoutInflater.from(this);
+                View selectedAppView = inflater.inflate(R.layout.selected_app_view, selectedAppLayout, false);
+
+                TextView appNameTextView = selectedAppView.findViewById(R.id.appNameSelected);
+                ImageView appIconImageView = selectedAppView.findViewById(R.id.appIconSelected);
+
+                appNameTextView.setText(appLabel);
+                appIconImageView.setImageDrawable(appIcon);
+
+                // Clear previous views if any and add the new selected app view
+                selectedAppLayout.removeAllViews();
+                selectedAppLayout.addView(selectedAppView);
+
+                // Optionally, show a toast or do something else with the selected app
+                Toast.makeText(MainActivity.this, "Selected App: " + appLabel, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private List<ApplicationInfo> getInstalledSensorApps() {
+        List<ApplicationInfo> sensorApps = new ArrayList<>();
+        List<ApplicationInfo> installedApps = packageManager.getInstalledApplications(0);
+
+        for (ApplicationInfo appInfo : installedApps) {
+            if (appInfo.packageName.startsWith("com.example.sensors_app-")) {
+                sensorApps.add(appInfo);
+            }
+        }
+        return sensorApps;
+    }
+}
+
+
+
+<!-- res/layout/selected_app_view.xml -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp">
+
+    <ImageView
+        android:id="@+id/appIconSelected"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:contentDescription="App Icon" />
+
+    <TextView
+        android:id="@+id/appNameSelected"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_vertical"
+        android:layout_marginStart="8dp"
+        android:textAppearance="?android:attr/textAppearanceMedium"
+        android:textColor="@android:color/black" />
+</LinearLayout>
