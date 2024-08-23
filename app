@@ -1,3 +1,77 @@
+ protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+
+
+
+        dropDown = findViewById(R.id.dropDown);
+        autoCompleteTextView = findViewById(R.id.autoCompleteTextView);
+        selectedAppLayout = findViewById(R.id.selectedAppLayout); // Add a container for selected app view
+        packageManager = getPackageManager();
+
+        // Retrieve installed apps with package names starting with "com.example.sensors_app-"
+        List<ApplicationInfo> sensorApps = getInstalledSensorApps();
+
+        // Create the custom adapter
+        appDropdownAdapter = new AppDropdownAdapter(this, sensorApps);
+
+        // Set the adapter to the AutoCompleteTextView
+        autoCompleteTextView.setAdapter(appDropdownAdapter);
+
+        // Set the OnItemClickListener to handle the selection
+        autoCompleteTextView.setOnItemClickListener((parent, view, position, id) -> {
+            // Get the selected ApplicationInfo
+            ApplicationInfo selectedApp = appDropdownAdapter.getItem(position);
+
+            // Get the app label (human-readable name) and app icon
+            if (selectedApp != null) {
+                String appLabel = packageManager.getApplicationLabel(selectedApp).toString();
+                Drawable appIcon = packageManager.getApplicationIcon(selectedApp);
+                Log.d("SENT","selected app  "+selectedApp+"*****************");
+
+                // Inflate the custom view and set app name and icon
+                LayoutInflater inflater = LayoutInflater.from(this);
+                View selectedAppView = inflater.inflate(R.layout.selected_app_view, selectedAppLayout, false);
+
+                TextView appNameTextView = selectedAppView.findViewById(R.id.appNameSelected);
+                ImageView appIconImageView = selectedAppView.findViewById(R.id.appIconSelected);
+
+                appNameTextView.setText(appLabel);
+                appIconImageView.setImageDrawable(appIcon);
+
+                // Clear previous views if any and add the new selected app view
+                selectedAppLayout.removeAllViews();
+                selectedAppLayout.addView(selectedAppView);
+
+                autoCompleteTextView.setText(appLabel);
+
+                // Optionally, show a toast or do something else with the selected app
+                Toast.makeText(MainActivity.this, "Selected App: " + appLabel, Toast.LENGTH_SHORT).show();
+            }
+        });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 package com.example.zscore;
 
 import androidx.annotation.Nullable;
