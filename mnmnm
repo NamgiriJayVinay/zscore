@@ -129,6 +129,67 @@ public class MainActivity extends AppCompatActivity {
 
 
 
+import android.content.Context;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.graphics.drawable.Drawable;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import java.util.List;
+
+public class AppDropdownAdapter extends ArrayAdapter<ApplicationInfo> {
+
+    private final PackageManager packageManager;
+    private final List<ApplicationInfo> appList;
+
+    public AppDropdownAdapter(@NonNull Context context, @NonNull List<ApplicationInfo> objects) {
+        super(context, 0, objects);
+        this.packageManager = context.getPackageManager();
+        this.appList = objects;
+    }
+
+    @NonNull
+    @Override
+    public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+        // Inflate the custom layout for each item
+        if (convertView == null) {
+            convertView = LayoutInflater.from(getContext()).inflate(R.layout.item_app_dropdown, parent, false);
+        }
+
+        // Get the current app info
+        ApplicationInfo appInfo = appList.get(position);
+
+        // Get the app icon and app name
+        Drawable appIcon = packageManager.getApplicationIcon(appInfo);
+        String appName = packageManager.getApplicationLabel(appInfo).toString();
+
+        // Set the icon and name to the views
+        ImageView iconView = convertView.findViewById(R.id.appIcon);
+        TextView nameView = convertView.findViewById(R.id.appName);
+
+        iconView.setImageDrawable(appIcon);
+        nameView.setText(appName);
+
+        return convertView;
+    }
+
+    @Nullable
+    @Override
+    public ApplicationInfo getItem(int position) {
+        return appList.get(position);
+    }
+}
+
+
+
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
