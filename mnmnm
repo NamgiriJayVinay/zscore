@@ -123,3 +123,83 @@ public class MainActivity extends AppCompatActivity {
         Log.d("SENT", "Intent sent with " + intent);
     }
 }
+
+
+55555
+
+
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:padding="8dp">
+
+    <ImageView
+        android:id="@+id/appIcon"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="16dp"
+        android:contentDescription="App Icon" />
+
+    <TextView
+        android:id="@+id/appName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="16sp"
+        android:textColor="@android:color/black" />
+
+</LinearLayout>
+
+
+
+
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.os.Bundle;
+import android.widget.AutoCompleteTextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity {
+
+    private AutoCompleteTextView autoCompleteTextView;
+    private AppDropdownAdapter appDropdownAdapter;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        autoCompleteTextView = findViewById(R.id.autoCompleteTextView);
+
+        // Retrieve installed apps with package names starting with "com.example.sensors_app-"
+        List<ApplicationInfo> sensorApps = getInstalledSensorApps();
+
+        // Create the custom adapter
+        appDropdownAdapter = new AppDropdownAdapter(this, sensorApps);
+
+        // Set the adapter to the AutoCompleteTextView
+        autoCompleteTextView.setAdapter(appDropdownAdapter);
+    }
+
+    private List<ApplicationInfo> getInstalledSensorApps() {
+        List<ApplicationInfo> sensorApps = new ArrayList<>();
+        PackageManager pm = getPackageManager();
+        List<ApplicationInfo> installedApps = pm.getInstalledApplications(0);
+
+        for (ApplicationInfo appInfo : installedApps) {
+            if (appInfo.packageName.startsWith("com.example.sensors_app-")) {
+                sensorApps.add(appInfo);
+            }
+        }
+        return sensorApps;
+    }
+}
+
+
+
