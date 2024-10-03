@@ -1,14 +1,55 @@
-[Vivekanandan S] 07-04-2024 12:51
-@Jaya Vinay Namgiri Please try comparing features : AccessTime vs CPuTIme vs BgTime vs Power Usage vs WifiDataUsage
+<!-- res/layout/tooltip_layout.xml -->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:padding="10dp"
+    android:background="@drawable/tooltip_background" <!-- Custom background for tooltip -->
+    android:orientation="vertical">
+
+    <!-- TextView to display tooltip information -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="The Accuracy setting defines the precision of the data. Select from 1 (Low) to 5 (High)."
+        android:textColor="@android:color/white"
+        android:textSize="14sp" />
+</LinearLayout>
+
+;;;;;
 
 
-[Vivekanandan S] 07-04-2024 12:53
-We need to know the following statements:
+<!-- res/drawable/tooltip_background.xml -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#333333" /> <!-- Dark background color for the tooltip -->
+    <corners android:radius="8dp" /> <!-- Rounded corners -->
+    <padding
+        android:left="10dp"
+        android:top="10dp"
+        android:right="10dp"
+        android:bottom="10dp" />
+</shape>
 
-1. App A used a permission <X> times in background
-2. App A has used permissions <a,b,c,..> in background and caused battery increase by X% in background compared to foreground
-3. Permissions <A,B,C,..> were frequently used in background in last day
-4. App A has used permissions <A,B,C,..> in background causing increased CpuTime and Wifi Data usage
 
-[Vivekanandan S] 07-04-2024 12:56
-Basically, we need to know if an app has increased permission access along with increased cpu, power and wifi
+
+;;;
+
+// Method to show tooltip
+    private void showTooltip(View anchorView) {
+        // Inflate the tooltip layout
+        View tooltipView = LayoutInflater.from(this).inflate(R.layout.tooltip_layout, null);
+
+        // Create a PopupWindow with the tooltip view
+        PopupWindow popupWindow = new PopupWindow(
+                tooltipView,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+
+        // Set background drawable and elevation for the tooltip (for older Android versions)
+        popupWindow.setBackgroundDrawable(getResources().getDrawable(R.drawable.tooltip_background));
+        popupWindow.setElevation(10); // Optional: Remove for older versions below Lollipop
+
+        // Show the tooltip aligned to the info icon
+        popupWindow.showAsDropDown(anchorView, 0, 10, Gravity.TOP | Gravity.START);
+    }
