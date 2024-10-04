@@ -1,3 +1,67 @@
+    // Method to get formatted date string based on input date
+    public static String getFormattedDateString(String input) {
+        // Extract the date and time substring from the input string
+        String dateTimeStr = input.substring(input.indexOf("Date of detection") + 18).trim();
+
+        // Define the original format of the input date and the desired formats
+        SimpleDateFormat originalFormat = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss");
+        SimpleDateFormat todayFormat = new SimpleDateFormat("'Today at' HH : mm");
+        SimpleDateFormat yesterdayFormat = new SimpleDateFormat("'Yesterday at' HH : mm");
+        SimpleDateFormat generalFormat = new SimpleDateFormat("dd MMM yyyy 'at' HH : mm");
+
+        try {
+            // Parse the extracted date string into a Date object
+            Date date = originalFormat.parse(dateTimeStr);
+
+            // Get today's and yesterday's dates for comparison
+            Calendar calendar = Calendar.getInstance();
+            Date today = calendar.getTime();
+
+            calendar.add(Calendar.DATE, -1);
+            Date yesterday = calendar.getTime();
+
+            // Determine and return the appropriate formatted string
+            if (isSameDay(date, today)) {
+                return todayFormat.format(date); // Format as "Today at HH : mm"
+            } else if (isSameDay(date, yesterday)) {
+                return yesterdayFormat.format(date); // Format as "Yesterday at HH : mm"
+            } else {
+                return generalFormat.format(date); // Format as "dd MMM yyyy at HH : mm"
+            }
+        } catch (ParseException e) {
+            e.printStackTrace();
+            return "Invalid date format"; // Return an error message if parsing fails
+        }
+    }
+
+    // Helper method to check if two dates fall on the same day
+    private static boolean isSameDay(Date date1, Date date2) {
+        Calendar cal1 = Calendar.getInstance();
+        cal1.setTime(date1);
+        Calendar cal2 = Calendar.getInstance();
+        cal2.setTime(date2);
+
+        return cal1.get(Calendar.YEAR) == cal2.get(Calendar.YEAR) &&
+               cal1.get(Calendar.DAY_OF_YEAR) == cal2.get(Calendar.DAY_OF_YEAR);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 #------------------------ This is plot 1 --------------------------------------------------------
 
 # adding recently used column 
