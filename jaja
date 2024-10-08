@@ -1,364 +1,133 @@
-package com.example.sensors_app;
-
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.Service;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.database.Cursor;
-import android.os.Build;
-import android.os.Handler;
-import android.os.IBinder;
-import android.provider.CalendarContract;
-import android.util.Log;
-import androidx.annotation.NonNull;
-import androidx.core.app.NotificationCompat;
-import androidx.core.content.ContextCompat;
-
-public class CalendarService extends Service {
-
-    private static final String TAG = "CalendarService";
-    public static final String CHANNEL_ID = "CalendarServiceChannel";
-    private Handler handler = new Handler();
-    private Runnable stopRunnable;
+public class Activity1 extends AppCompatActivity {
+    private SwitchCompat switch1;
 
     @Override
-    public void onCreate() {
-        super.onCreate();
-        Log.d(TAG, "CalendarService Created");
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity1);
 
-        // Create a notification and start the service in the foreground
-        createNotificationChannel();
-        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Calendar Service Running")
-                .setContentText("Accessing calendar in the background")
-                .setSmallIcon(android.R.drawable.ic_menu_info_details)
-                .build();
+        switch1 = findViewById(R.id.switch1);
 
-        startForeground(8, notification);
+        // Load saved switch state on startup
+        SharedPreferences sharedPreferences = getSharedPreferences("MyPreferences", MODE_PRIVATE);
+        boolean switchState = sharedPreferences.getBoolean("service_running", false);
+        switch1.setChecked(switchState);
 
-        // Check for calendar permission and read calendar events
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_CALENDAR) == PackageManager.PERMISSION_GRANTED) {
-            readCalendarEvents();
-        } else {
-            Log.d(TAG, "Calendar permission not granted");
-        }
-    }
+        // Start or stop the service based on switch state
+        switch1.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putBoolean("service_running", isChecked);
+            editor.apply();
 
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d(TAG, "CalendarService Started");
-
-        // Get duration and schedule stop
-        int duration = intent.getIntExtra("DURATION", 0);
-        scheduleStop(duration);
-
-        return START_STICKY;
-    }
-
-    private void readCalendarEvents() {
-        Log.d(TAG, "Reading calendar events...");
-
-        // Query the Calendar content provider for events
-        Cursor cursor = getContentResolver().query(CalendarContract.Events.CONTENT_URI,
-                new String[]{CalendarContract.Events._ID, CalendarContract.Events.TITLE, CalendarContract.Events.DTSTART},
-                null, null, null);
-
-        if (cursor != null && cursor.getCount() > 0) {
-            while (cursor.moveToNext()) {
-                String eventId = cursor.getString(cursor.getColumnIndex(CalendarContract.Events._ID));
-                String eventTitle = cursor.getString(cursor.getColumnIndex(CalendarContract.Events.TITLE));
-                long eventStart = cursor.getLong(cursor.getColumnIndex(CalendarContract.Events.DTSTART));
-
-                // Log or store the event details
-                Log.d(TAG, "Event ID: " + eventId + ", Title: " + eventTitle + ", Start Time: " + eventStart);
+            if (isChecked) {
+                startService(new Intent(Activity1.this, MyForegroundService.class));
+            } else {
+                stopService(new Intent(Activity1.this, MyForegroundService.class));
             }
-            cursor.close();
-        } else {
-            Log.d(TAG, "No calendar events found");
-        }
-    }
 
-    private void scheduleStop(int duration) {
-        if (stopRunnable != null) {
-            handler.removeCallbacks(stopRunnable);
-        }
-        stopRunnable = () -> stopSelf();
-        handler.postDelayed(stopRunnable, duration * 1000); // Convert duration to milliseconds
+            // Broadcast the new state so that Activity 2 can update its switch
+            Intent broadcastIntent = new Intent("com.example.SERVICE_STATE_CHANGED");
+            broadcastIntent.putExtra("service_running", isChecked);
+            sendBroadcast(broadcastIntent);
+        });
+
+        // Register the BroadcastReceiver to listen for service state changes
+        IntentFilter filter = new IntentFilter("com.example.SERVICE_STATE_CHANGED");
+        registerReceiver(serviceStateReceiver, filter);
     }
 
     @Override
-    public void onDestroy() {
+    protected void onResume() {
+        super.onResume();
+        SharedPreferences sharedPreferences = getSharedPreferences("MyPreferences", MODE_PRIVATE);
+        boolean switchState = sharedPreferences.getBoolean("service_running", false);
+        switch1.setChecked(switchState);
+    }
+
+    // BroadcastReceiver to update the switch state based on broadcasts from other activities
+    private final BroadcastReceiver serviceStateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent != null && "com.example.SERVICE_STATE_CHANGED".equals(intent.getAction())) {
+                boolean serviceRunning = intent.getBooleanExtra("service_running", false);
+                switch1.setChecked(serviceRunning);
+            }
+        }
+    };
+
+    @Override
+    protected void onDestroy() {
         super.onDestroy();
-        Log.d(TAG, "CalendarService Destroyed");
+        unregisterReceiver(serviceStateReceiver);
+    }
+}
+
+
+
+public class Activity2 extends AppCompatActivity {
+    private SwitchCompat switch2;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity2);
+
+        switch2 = findViewById(R.id.switch2);
+
+        // Load saved switch state on startup
+        SharedPreferences sharedPreferences = getSharedPreferences("MyPreferences", MODE_PRIVATE);
+        boolean switchState = sharedPreferences.getBoolean("service_running", false);
+        switch2.setChecked(switchState);
+
+        // Start or stop the service based on switch state
+        switch2.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putBoolean("service_running", isChecked);
+            editor.apply();
+
+            if (isChecked) {
+                startService(new Intent(Activity2.this, MyForegroundService.class));
+            } else {
+                stopService(new Intent(Activity2.this, MyForegroundService.class));
+            }
+
+            // Broadcast the new state so that Activity 1 can update its switch
+            Intent broadcastIntent = new Intent("com.example.SERVICE_STATE_CHANGED");
+            broadcastIntent.putExtra("service_running", isChecked);
+            sendBroadcast(broadcastIntent);
+        });
+
+        // Register the BroadcastReceiver to listen for service state changes
+        IntentFilter filter = new IntentFilter("com.example.SERVICE_STATE_CHANGED");
+        registerReceiver(serviceStateReceiver, filter);
     }
 
     @Override
-    public IBinder onBind(Intent intent) {
-        return null;
+    protected void onResume() {
+        super.onResume();
+        SharedPreferences sharedPreferences = getSharedPreferences("MyPreferences", MODE_PRIVATE);
+        boolean switchState = sharedPreferences.getBoolean("service_running", false);
+        switch2.setChecked(switchState);
     }
 
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel serviceChannel = new NotificationChannel(
-                    CHANNEL_ID,
-                    "Calendar Service Channel",
-                    NotificationManager.IMPORTANCE_DEFAULT
-            );
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(serviceChannel);
+    // BroadcastReceiver to update the switch state based on broadcasts from other activities
+    private final BroadcastReceiver serviceStateReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent != null && "com.example.SERVICE_STATE_CHANGED".equals(intent.getAction())) {
+                boolean serviceRunning = intent.getBooleanExtra("service_running", false);
+                switch2.setChecked(serviceRunning);
             }
         }
+    };
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(serviceStateReceiver);
     }
 }
 
 
 
 
-
-
-
-package com.example.sensors_app;
-
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.Service;
-import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.net.wifi.ScanResult;
-import android.net.wifi.WifiManager;
-import android.os.Build;
-import android.os.Handler;
-import android.os.IBinder;
-import android.util.Log;
-import androidx.annotation.NonNull;
-import androidx.core.app.NotificationCompat;
-import androidx.core.content.ContextCompat;
-
-import java.util.List;
-
-public class WifiService extends Service {
-
-    private static final String TAG = "WifiService";
-    public static final String CHANNEL_ID = "WifiServiceChannel";
-    private WifiManager wifiManager;
-    private Handler handler = new Handler();
-    private Runnable stopRunnable;
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        Log.d(TAG, "WifiService Created");
-
-        // Create a notification and start the service in the foreground
-        createNotificationChannel();
-        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Wi-Fi Scanning Service Running")
-                .setContentText("Scanning for nearby Wi-Fi devices")
-                .setSmallIcon(android.R.drawable.ic_menu_info_details)
-                .build();
-
-        startForeground(9, notification);
-
-        wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-
-        // Check for necessary permissions and start Wi-Fi scan
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
-            ContextCompat.checkSelfPermission(this, android.Manifest.permission.NEARBY_WIFI_DEVICES) == PackageManager.PERMISSION_GRANTED) {
-
-            scanNearbyWifiDevices();
-        } else {
-            Log.d(TAG, "Necessary permissions not granted");
-        }
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        Log.d(TAG, "WifiService Started");
-
-        // Get duration and schedule stop
-        int duration = intent.getIntExtra("DURATION", 0);
-        scheduleStop(duration);
-
-        return START_STICKY;
-    }
-
-    private void scanNearbyWifiDevices() {
-        Log.d(TAG, "Scanning nearby Wi-Fi devices...");
-
-        // Ensure Wi-Fi is enabled
-        if (!wifiManager.isWifiEnabled()) {
-            wifiManager.setWifiEnabled(true);
-        }
-
-        // Start Wi-Fi scan
-        boolean success = wifiManager.startScan();
-        if (success) {
-            List<ScanResult> scanResults = wifiManager.getScanResults();
-            for (ScanResult scanResult : scanResults) {
-                String ssid = scanResult.SSID;
-                String bssid = scanResult.BSSID;
-                int level = scanResult.level; // Signal strength in dBm
-                Log.d(TAG, "Found Wi-Fi device: SSID=" + ssid + ", BSSID=" + bssid + ", Signal Strength=" + level + " dBm");
-            }
-        } else {
-            Log.d(TAG, "Wi-Fi scan failed");
-        }
-    }
-
-    private void scheduleStop(int duration) {
-        if (stopRunnable != null) {
-            handler.removeCallbacks(stopRunnable);
-        }
-        stopRunnable = () -> stopSelf();
-        handler.postDelayed(stopRunnable, duration * 1000); // Convert duration to milliseconds
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        Log.d(TAG, "WifiService Destroyed");
-    }
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
-
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel serviceChannel = new NotificationChannel(
-                    CHANNEL_ID,
-                    "Wi-Fi Scanning Service Channel",
-                    NotificationManager.IMPORTANCE_DEFAULT
-            );
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(serviceChannel);
-            }
-        }
-    }
-}
-
-
-
-<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-<uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-<uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
-<uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
-<uses-permission android:name="android.permission.FOREGROUND_SERVICE_NEARBY_WIFI_DEVICES" />
-
-
-
-package com.example.sensors_app;
-
-import android.app.Notification;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.Service;
-import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
-import android.os.Build;
-import android.os.IBinder;
-import android.util.Log;
-import androidx.core.app.NotificationCompat;
-
-public class BluetoothService extends Service {
-
-    private static final String CHANNEL_ID = "BluetoothServiceChannel";
-    private static final String TAG = "BluetoothService";
-    private BluetoothAdapter bluetoothAdapter;
-    private BroadcastReceiver bluetoothReceiver;
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        createNotificationChannel();
-
-        bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (bluetoothAdapter == null) {
-            Log.e(TAG, "Bluetooth not supported on this device");
-            stopSelf();
-            return;
-        }
-
-        bluetoothReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                String action = intent.getAction();
-                if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-                    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                    if (device != null) {
-                        String deviceName = device.getName();
-                        String deviceAddress = device.getAddress();
-                        Log.d(TAG, "Found device: Name=" + deviceName + ", Address=" + deviceAddress);
-                    }
-                }
-            }
-        };
-
-        // Register the BroadcastReceiver to listen for Bluetooth device discovery
-        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        registerReceiver(bluetoothReceiver, filter);
-
-        // Start scanning for devices
-        startScanning();
-
-        // Create a foreground notification
-        Notification notification = new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setContentTitle("Bluetooth Service")
-                .setContentText("Scanning for nearby Bluetooth devices")
-                .setSmallIcon(android.R.drawable.ic_menu_search)
-                .build();
-
-        startForeground(1, notification);
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        return START_STICKY;
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        if (bluetoothAdapter != null) {
-            bluetoothAdapter.cancelDiscovery();
-        }
-        unregisterReceiver(bluetoothReceiver);
-        Log.d(TAG, "BluetoothService destroyed");
-    }
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
-
-    private void startScanning() {
-        if (bluetoothAdapter != null) {
-            bluetoothAdapter.startDiscovery();
-        }
-    }
-
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel serviceChannel = new NotificationChannel(
-                    CHANNEL_ID,
-                    "Bluetooth Service Channel",
-                    NotificationManager.IMPORTANCE_DEFAULT
-            );
-            NotificationManager manager = getSystemService(NotificationManager.class);
-            if (manager != null) {
-                manager.createNotificationChannel(serviceChannel);
-            }
-        }
-    }
-}
