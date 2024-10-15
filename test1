@@ -1,43 +1,73 @@
-import pandas as pd
-import numpy as np
-import plotly.express as px
-from sklearn.mixture import GaussianMixture
+    public void schedulePreprocessingWorker() {
+        
+                Constraints constraints = new Constraints.Builder()
+                        //.setRequiresCharging(true)
+                        .setRequiresBatteryNotLow(false)
+                        .setRequiresDeviceIdle(false)
+                        .build();
 
-# Load the dataset
-file_path = 'data_zscore_1.csv'
-data = pd.read_csv(file_path)
+                // logic for exactly at 9AM everyday
+                Calendar currentDate=Calendar.getInstance();
 
-# Select relevant columns for analysis
-columns_to_analyze = ['Access Time', 'cpuTime', 'backgroundTime', 'powerUsage', 'wifiDataUsage']
-data_filtered = data[columns_to_analyze].copy()
+                Calendar dueDate=Calendar.getInstance();
 
-# Fit a Gaussian Mixture Model (GMM)
-gmm = GaussianMixture(n_components=2, random_state=0)
-gmm.fit(data_filtered)
+                dueDate.set(Calendar.HOUR_OF_DAY,10);
+                dueDate.set(Calendar.MINUTE,35);
+                dueDate.set(Calendar.SECOND,0);
 
-# Predict the probabilities and determine anomalies
-data_filtered['probability'] = gmm.score_samples(data_filtered)
-data_filtered['is_anomaly'] = data_filtered['probability'] < np.percentile(data_filtered['probability'], 5)
+                if (dueDate.before(currentDate)){
+                    dueDate.add(Calendar.HOUR_OF_DAY,24);
+                }
 
-# Add the packageName to the dataframe for grouping in the plots
-data_filtered['packageName'] = data['packageName']
+                long initialDelay=dueDate.getTimeInMillis()-currentDate.getTimeInMillis();
 
-# Melt the dataframe for easier plotting with Plotly
-data_melted = data_filtered.melt(id_vars=['packageName', 'is_anomaly'], var_name='Feature', value_name='Value')
+                PeriodicWorkRequest periodicWorkRequest=new PeriodicWorkRequest.Builder(
+                        PreprocessingWorker.class,24, TimeUnit.HOURS)
+                        .setInitialDelay(initialDelay,TimeUnit.MILLISECONDS)
+                        .setConstraints(constraints)
+                        .build();
 
-# Create the plot
-fig = px.bar(data_melted, x='packageName', y='Value', color='Feature', 
-             title='Anomaly Detection using Gaussian Mixtures', 
-             labels={'Value': 'Value', 'packageName': 'Package Name'},
-             facet_col='Feature', facet_col_wrap=3)
+                WorkManager workManager=WorkManager.getInstance(this);
+                
+                // Define the existing periodic work policy
+                ExistingPeriodicWorkPolicy existingPeriodicWorkPolicy = ExistingPeriodicWorkPolicy.REPLACE;
 
-# Highlight anomalies
-anomalies = data_melted[data_melted['is_anomaly']]
-fig.add_scatter(x=anomalies['packageName'], y=anomalies['Value'], mode='markers', marker=dict(color='red'), 
-                name='Anomaly')
+                workManager.enqueueUniquePeriodicWork(
+                        "PeriodicWork",
+                        existingPeriodicWorkPolicy,
+                        periodicWorkRequest
+                );
 
-# Update x-axis labels rotation
-fig.update_layout(xaxis_tickangle=-45)
+                workManager.getWorkInfosForUniqueWorkLiveData("PeriodicWork")
+                .observe(this, workInfos -> {
+                    if (workInfos!=null && !workInfos.isEmpty()){
+                        WorkInfo workInfo=workInfos.get(0);
+                        if (workInfo.getState()==WorkInfo.State.SUCCEEDED){
+                            markDate();
+                            Log.i("CODE-FLOW","Worker Manager Started - ✅");
 
-# Show the plot
-fig.show()
+                        }else {
+                            Log.i("CODE-FLOW","Worker Manager Started - ✅");
+                        }
+                    }
+                    Date currentTime = Calendar.getInstance().getTime();
+                    SimpleDateFormat timeFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+                    String formattedTime = timeFormat.format(currentTime);
+
+
+                    SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy");                    // Get the current date
+                    Date date = new Date();
+                    // Format the date
+                    String formattedDate = sdf.format(date.toString());
+
+                    // Print the formatted date
+                    //System.out.println(formattedDate);
+                    TextView log_txt=findViewById(R.id.periodic_request_logs_textView);
+                    log_txt.setText("* Last preprocessed at " + " " + formattedTime);
+                    Log.i("WORKER_NOTI","* Last preprocessed at " + " " + formattedTime);
+
+                });
+
+                Log.i("CODE-FLOW","Worker Manager Started - ✅");
+
+    }
