@@ -11,3 +11,40 @@ Uri packageUri = Uri.fromParts("package", pkg, null);
 
         // after touch continue to below code
         Boolean isAppPresent = checkForAppPresent(pkg);
+
+
+777
+// Start the uninstall process
+Uri packageUri = Uri.fromParts("package", pkg, null);
+Intent uninstallIntent = new Intent(Intent.ACTION_DELETE, packageUri);
+uninstallIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+Context context = activity.getApplicationContext();
+context.startActivity(uninstallIntent);
+Log.i("UNISTALL_ACTION", String.valueOf(context));
+
+// Wait for user touch and uninstall action
+activity.getWindow().getDecorView().setOnTouchListener(new View.OnTouchListener() {
+    @Override
+    public boolean onTouch(View v, MotionEvent event) {
+        // The user touched the screen, continue with app check
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            Boolean isAppPresent = checkForAppPresent(pkg);
+            Log.i("UNINSTALL_CHECK", "Is app present: " + isAppPresent);
+            
+            // If necessary, add further logic after the touch event
+            return true;
+        }
+        return false;
+    }
+});
+
+// Function to check if the app is still installed
+public boolean checkForAppPresent(String pkgName) {
+    try {
+        context.getPackageManager().getPackageInfo(pkgName, 0);
+        return true;
+    } catch (PackageManager.NameNotFoundException e) {
+        return false;  // App is not installed
+    }
+}
